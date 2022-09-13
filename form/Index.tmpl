@@ -1,0 +1,41 @@
+
+{{ define "Index" }}
+  {{ template "Header" }}
+    {{ template "Menu"  }}
+    <h2 class="subtitle"> Registered </h2>
+    <div class="table-container">
+    <table border="1" class="table">
+      <thead class="thead">
+      <tr>
+        <td>ID</td>
+        <td>Name</td>
+        <td>City</td>
+        <td>Photo</td>
+      </tr>
+      <tr>
+        <td>View</td>
+        <td>Edit</td>
+        <td>Delete</td>
+      </tr>
+       </thead>
+       <tbody>
+    {{ range . }}
+      <tr>
+        <td>{{ .Id }}</td>
+        <td> {{ .Name }} </td>
+        <td>{{ .City }} </td> 
+        <td><img src="data:image/png;base64,{{ .Photo }} "</></td> 
+      </tr>
+      <tr>
+        <td><a href="/show?id={{ .Id }}">View</a></td>
+        <td><a href="/edit?id={{ .Id }}">Edit</a></td>
+        <td><a href="/delete?id={{ .Id }}">Delete</a><td>
+      </tr>
+    {{ end }}
+       </tbody>
+    </table>
+    </div>
+  {{ template "Footer" }}
+{{ end }}
+
+

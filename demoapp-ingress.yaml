@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demoapp-nginx
+spec:
+  rules:
+  - host: demoapp.example.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: demoapp-mysql
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+  tls:
+  - hosts:
+    - demoapp.example.com

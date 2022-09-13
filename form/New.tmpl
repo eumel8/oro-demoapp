@@ -1,0 +1,12 @@
+{{ define "New" }}
+  {{ template "Header" }}
+    {{ template "Menu" }} 
+   <h2 class="subtitle">New Name and City</h2>  
+    <form enctype="multipart/form-data" method="POST" action="insert">
+      <label> Name </label><input class="input" type="text" name="name" /><br />
+      <label> City </label><input class="input" type="text" name="city" /><br />
+      <label> Photo (100x100 PNG)</label><input class="input" type="file" name="file" /> <br />
+      <input type="submit" class="submit" value="Save user" />
+    </form>
+  {{ template "Footer" }}
+{{ end }}
