@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/base64"
 	"image"
@@ -15,6 +16,11 @@ import (
 	"github.com/nfnt/resize"
 
 	_ "github.com/go-sql-driver/mysql"
+
+	"k8s.io/client-go/rest"
+
+	rdsv1alpha1clientset "github.com/eumel8/otc-rds-operator/pkg/rds/v1alpha1/apis/clientset/versioned"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Employee struct {
@@ -25,13 +31,34 @@ type Employee struct {
 }
 
 func dbConn(w http.ResponseWriter) (db *sql.DB) {
+
+	restConfig, err := rest.InClusterConfig()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("KAUTH: " + err.Error())
+		return
+	}
+	rdsclientset, err := rdsv1alpha1clientset.NewForConfig(restConfig)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("KAUTH: " + err.Error())
+		return
+	}
+	rds, err := rdsclientset.McspsV1alpha1().Rdss("demoapp").Get(context.TODO(), "demapp-rds", metav1.GetOptions{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("KAUTH: " + err.Error())
+		return
+	}
+
 	dbDriver := "mysql"
 	dbUser := os.Getenv("MYSQL_USER")
 	dbPass := os.Getenv("MYSQL_PASSWORD")
-	dbHost := os.Getenv("MYSQL_HOST")
+	dbHost := rds.Status.Ip
+	// dbHost := os.Getenv("MYSQL_HOST")
 	dbPort := os.Getenv("MYSQL_PORT")
 	dbName := os.Getenv("MYSQL_DB")
-	db, err := sql.Open(dbDriver, dbUser+":"+dbPass+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
+	db, err = sql.Open(dbDriver, dbUser+":"+dbPass+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Println("DBCONN: " + err.Error())
