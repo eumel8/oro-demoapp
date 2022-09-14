@@ -55,6 +55,7 @@ func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
 	}
 
 	for {
+		log.Println("LOOP: get rds " + rdsname)
 		rds, err := rdsclientset.McspsV1alpha1().Rdss(namespace).Get(context.TODO(), rdsname, metav1.GetOptions{})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -62,6 +63,7 @@ func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
 			return nil, err
 		}
 		if rds.Status.Status == "ACTIVE" {
+			log.Println("DB ACTIVE")
 			for _, i := range *rds.Spec.Users {
 				dbUser = i.Name
 				dbPass = i.Password
@@ -71,6 +73,7 @@ func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
 			dbHost := rds.Status.Ip
 			dbPort := rds.Spec.Port
 			dbName := rds.Spec.Databases[0]
+			log.Println("DB CONNECT" + dbUser + dbHost + dbName)
 			db, err = sql.Open(dbDriver, dbUser+":"+dbPass+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
