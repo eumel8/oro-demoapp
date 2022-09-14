@@ -1,14 +1,13 @@
 apiVersion: otc.mcsps.de/v1alpha1
 kind: Rds
 metadata:
-  name: demoapp-rds
+  name: demoapp
 spec:
   availabilityzone: "eu-de-01,eu-de-02"
   backupstarttime: "01:00-02:00"
   backupkeepdays: 10
   databases:
-  - project1
-  - project2
+  - app
   datastoretype: "MySQL"
   datastoreversion: "8.0"
   flavorref: "rds.mysql.c2.medium.ha"
@@ -20,17 +19,11 @@ spec:
   subnet: "golang"
   securitygroup: "golang"
   users:
-  - host: 10.9.3.%
-    name: app1
+  - host: "%"
+    name: app
     password: app1+Mond
     privileges:
-    - GRANT ALL ON project1.* TO 'app1'@'10.9.3.%'
-    - GRANT SELECT ON project2.* TO 'app1'@'10.9.3.%'
-  - host: 10.9.3.%
-    name: app2
-    password: app2+Tues
-    privileges:
-    - GRANT SELECT ON project2.* TO 'app2'@'10.9.3.%'
+    - GRANT ALL ON app.* TO 'app'@'%'
   volumetype: "COMMON"
   volumesize: 40
   vpc: "golang"

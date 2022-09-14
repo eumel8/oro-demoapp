@@ -30,48 +30,65 @@ type Employee struct {
 	Photo string
 }
 
-func dbConn(w http.ResponseWriter) (db *sql.DB) {
+var tmpl = template.Must(template.ParseGlob("form/*"))
+var dataDir = os.Getenv("DATA_DIR")
+
+func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
+
+	rdsname := os.Getenv("MYSQL_NAME")
+	namespace := os.Getenv("MYSQL_NAMESPACE")
+
+	var dbUser string
+	var dbPass string
 
 	restConfig, err := rest.InClusterConfig()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Println("KAUTH: " + err.Error())
-		return
+		return nil, err
 	}
 	rdsclientset, err := rdsv1alpha1clientset.NewForConfig(restConfig)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Println("KAUTH: " + err.Error())
-		return
-	}
-	rds, err := rdsclientset.McspsV1alpha1().Rdss("demoapp").Get(context.TODO(), "demapp-rds", metav1.GetOptions{})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Println("KAUTH: " + err.Error())
-		return
+		return nil, err
 	}
 
-	dbDriver := "mysql"
-	dbUser := os.Getenv("MYSQL_USER")
-	dbPass := os.Getenv("MYSQL_PASSWORD")
-	dbHost := rds.Status.Ip
-	// dbHost := os.Getenv("MYSQL_HOST")
-	dbPort := os.Getenv("MYSQL_PORT")
-	dbName := os.Getenv("MYSQL_DB")
-	db, err = sql.Open(dbDriver, dbUser+":"+dbPass+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Println("DBCONN: " + err.Error())
-		return nil
+	for {
+		rds, err := rdsclientset.McspsV1alpha1().Rdss(namespace).Get(context.TODO(), rdsname, metav1.GetOptions{})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("KRDS: " + err.Error())
+			return nil, err
+		}
+		if rds.Status.Status == "ACTIVE" {
+			for _, i := range *rds.Spec.Users {
+				dbUser = i.Name
+				dbPass = i.Password
+				break
+			}
+			dbDriver := "mysql"
+			dbHost := rds.Status.Ip
+			dbPort := rds.Spec.Port
+			dbName := rds.Spec.Databases[0]
+			db, err = sql.Open(dbDriver, dbUser+":"+dbPass+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				log.Println("DBCONN: " + err.Error())
+				return nil, err
+			}
+			return db, nil
+		}
 	}
-	return db
 }
 
-var tmpl = template.Must(template.ParseGlob("form/*"))
-var dataDir = os.Getenv("DATA_DIR")
-
 func Index(w http.ResponseWriter, r *http.Request) {
-	db := dbConn(w)
+	db, err := dbConn(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("DB: " + err.Error())
+		return
+	}
 	selDB, err := db.Query("SELECT * FROM employee ORDER BY id DESC")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -123,7 +140,12 @@ func Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func Show(w http.ResponseWriter, r *http.Request) {
-	db := dbConn(w)
+	db, err := dbConn(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("DB: " + err.Error())
+		return
+	}
 	nId := r.URL.Query().Get("id")
 	selDB, err := db.Query("SELECT * FROM employee WHERE id=?", nId)
 	if err != nil {
@@ -155,7 +177,12 @@ func New(w http.ResponseWriter, r *http.Request) {
 }
 
 func Edit(w http.ResponseWriter, r *http.Request) {
-	db := dbConn(w)
+	db, err := dbConn(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("DB: " + err.Error())
+		return
+	}
 	nId := r.URL.Query().Get("id")
 	selDB, err := db.Query("SELECT * FROM employee WHERE id=?", nId)
 	if err != nil {
@@ -183,7 +210,12 @@ func Edit(w http.ResponseWriter, r *http.Request) {
 }
 
 func Insert(w http.ResponseWriter, r *http.Request) {
-	db := dbConn(w)
+	db, err := dbConn(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("DB: " + err.Error())
+		return
+	}
 	if r.Method == "POST" {
 		name := r.FormValue("name")
 		if name == "" {
@@ -243,7 +275,12 @@ func uploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func Update(w http.ResponseWriter, r *http.Request) {
-	db := dbConn(w)
+	db, err := dbConn(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("DB: " + err.Error())
+		return
+	}
 	if r.Method == "POST" {
 		name := r.FormValue("name")
 		city := r.FormValue("city")
@@ -263,7 +300,12 @@ func Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func Delete(w http.ResponseWriter, r *http.Request) {
-	db := dbConn(w)
+	db, err := dbConn(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("DB: " + err.Error())
+		return
+	}
 	emp := r.URL.Query().Get("id")
 	delForm, err := db.Prepare("DELETE FROM employee WHERE id=?")
 	if err != nil {
