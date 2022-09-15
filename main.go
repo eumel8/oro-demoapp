@@ -73,13 +73,30 @@ func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
 			dbHost := rds.Status.Ip
 			dbPort := rds.Spec.Port
 			dbName := rds.Spec.Databases[0]
-			log.Println("DB CONNECT" + dbUser + dbHost + dbName + dbPass)
+			log.Println("DB CONNECT " + dbHost)
 			db, err = sql.Open(dbDriver, dbUser+":"+dbPass+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				log.Println("DBCONN: " + err.Error())
 				return nil, err
 			}
+
+			createTable := `CREATE TABLE IF NOT EXISTS employee (
+      				id int(6) unsigned NOT NULL AUTO_INCREMENT,
+				name varchar(30) NOT NULL,
+ 				city varchar(30) NOT NULL,
+				photo varchar(128) NOT NULL,
+				PRIMARY KEY (id)
+				) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1`
+
+			_, err := db.Query(createTable)
+
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				log.Println("CREATETABLE: " + err.Error())
+				return nil, err
+			}
+
 			return db, nil
 		}
 	}
