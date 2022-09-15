@@ -12,11 +12,10 @@ import (
 	"net/http"
 	"os"
 	"text/template"
-
-	"github.com/nfnt/resize"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-
+	"github.com/nfnt/resize"
 	"k8s.io/client-go/rest"
 
 	rdsv1alpha1clientset "github.com/eumel8/otc-rds-operator/pkg/rds/v1alpha1/apis/clientset/versioned"
@@ -99,6 +98,7 @@ func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
 
 			return db, nil
 		}
+		time.Sleep(5 * time.Second)
 	}
 }
 
