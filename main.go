@@ -73,7 +73,7 @@ func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
 			dbHost := rds.Status.Ip
 			dbPort := rds.Spec.Port
 			dbName := rds.Spec.Databases[0]
-			log.Println("DB CONNECT" + dbUser + dbHost + dbName)
+			log.Println("DB CONNECT" + dbUser + dbHost + dbName + dbPass)
 			db, err = sql.Open(dbDriver, dbUser+":"+dbPass+"@tcp("+dbHost+":"+dbPort+")/"+dbName)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
