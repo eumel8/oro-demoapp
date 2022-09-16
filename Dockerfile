@@ -14,7 +14,8 @@ WORKDIR /
 
 USER nonroot:nonroot
 COPY --from=builder --chown=nonroot:nonroot /app/main /
-COPY --from=builder --chown=nonroot:nonroot /app/kodata /kodata
+COPY --from=builder --chown=nonroot:nonroot /app/kodata /var/run/ko
 
+ENV KO_DATA_PATH=/var/run/ko
 EXPOSE 8080
 ENTRYPOINT ["/main"]
