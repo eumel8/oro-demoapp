@@ -29,7 +29,9 @@ type Employee struct {
 	Photo string
 }
 
-var tmpl = template.Must(template.ParseGlob("kodata/*"))
+var tmpl = template.Must(template.ParseGlob(os.Getenv("KO_DATA_PATH") + "/*"))
+
+// var tmpl = template.Must(template.ParseGlob("kodata/*"))
 var dataDir = os.Getenv("DATA_DIR")
 
 func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
@@ -103,6 +105,7 @@ func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
+	log.Println("KO_DATA_PATH: " + os.Getenv("KO_DATA_PATH"))
 	db, err := dbConn(w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
