@@ -29,7 +29,7 @@ type Employee struct {
 	Photo string
 }
 
-var tmpl = template.Must(template.ParseGlob("form/*"))
+var tmpl = template.Must(template.ParseGlob("kodata/*"))
 var dataDir = os.Getenv("DATA_DIR")
 
 func dbConn(w http.ResponseWriter) (db *sql.DB, err error) {
