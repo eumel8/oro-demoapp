@@ -38,9 +38,9 @@ jobs:
 
     - name: Build the image with ko
       run: |
-        ko build -t demoapp:ko --sbom none --bare
-      # env:
-      #  KO_DOCKER_REPO: ghcr.io/eumel8/oro-demoapp
+        ko build -t ko --sbom none --bare
+      env:
+       KO_DOCKER_REPO: ghcr.io/eumel8/oro-demoapp/demoapp
 
     - name: Build the image with docker
       run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
