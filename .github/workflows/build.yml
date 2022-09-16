@@ -38,7 +38,7 @@ jobs:
 
     - name: Build the image with ko
       run: |
-        ko apply -f form
+        ko resolve -f form
         ko build -t ko --sbom none --bare
       env:
        KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/oro-demoapp/demoapp
