@@ -91,3 +91,117 @@ After in-cluster authentication on K8S API, create rdsclientset,
 search for specific API and fetch, ip-address of RDS instance,
 username/password of app user and try to connect
 
+```go
+func Index(w http.ResponseWriter, r *http.Request) {
+	db, err := dbConn(w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("DB: " + err.Error())
+		return
+	}
+	selDB, err := db.Query("SELECT * FROM employee ORDER BY id DESC")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Println("INDEX: " + err.Error())
+		return
+	}
+	emp := Employee{}
+	res := []Employee{}
+	for selDB.Next() {
+		var id int
+		var name, city, photo string
+		err = selDB.Scan(&id, &name, &city, &photo)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			log.Println("INDEX 2: " + err.Error())
+			return
+		}
+		emp.Id = id
+		emp.Name = name
+		emp.City = city
+		if photo != "none" {
+			f, err := os.Open(dataDir + "/" + photo)
+			if err != nil {
+				// http.Error(w, err.Error(), http.StatusInternalServerError)
+				log.Println("INDEX : photoload " + err.Error())
+				// return
+			} else {
+				img, _, err := image.Decode(f)
+				sane := resize.Resize(100, 100, img, resize.Bilinear)
+				var buff bytes.Buffer
+				png.Encode(&buff, sane)
+
+				encodedString := base64.StdEncoding.EncodeToString(buff.Bytes())
+				emp.Photo = encodedString
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					log.Println("INDEX : photodecode" + err.Error())
+					return
+				}
+			}
+			defer f.Close()
+		} else {
+			emp.Photo = "iVBORw0KGgoAAAANSUhEUgAAAJoAAAB/CAYAAAAXdtsmAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAFiUAABYlAUlSJPAAAAFdSURBVHhe7dKxAYAwDMCw0P9/Boa+EE/S4gf8vL+BZecWVhmNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjYTRSBiNhNFIGI2E0UgYjcDMB+WSBPrvm9bgAAAAAElFTkSuQmCC"
+		}
+		res = append(res, emp)
+	}
+	tmpl.ExecuteTemplate(w, "Index", res)
+	defer db.Close()
+```
+
+Using [Go text/template package](https://pkg.go.dev/text/template) to provide HTML views
+for the web app. Form data are stored in MySQL database. The user can upload a file,
+which is stored on specific data dir.
+
+```go
+func main() {
+	log.Println("Server started on: :8080")
+	http.HandleFunc("/", Index)
+	http.HandleFunc("/show", Show)
+	http.HandleFunc("/new", New)
+	http.HandleFunc("/edit", Edit)
+	http.HandleFunc("/insert", Insert)
+	http.HandleFunc("/update", Update)
+	http.HandleFunc("/delete", Delete)
+	http.ListenAndServe(":8080", nil)
+}
+```
+
+Routing of http handler to different function. Service web app on port :8080
+
+```yaml
+---
+apiVersion: apps/v1
+kind: StatefulSet
+spec:
+  template:
+    spec:
+      containers:
+      - image: ghcr.io/eumel8/demoapp:1.0.0
+        name: demoapp
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MYSQL_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.serviceAccountName
+        - name: MYSQL_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: DATA_DIR
+          value: "/data" # external pvc
+        volumeMounts:
+        - mountPath: /data
+          name: demoapp-volume
+      serviceAccountName: demoapp
+      volumes:
+      - name: demoapp-volume
+        persistentVolumeClaim:
+          claimName: demoapp-volume
+```
+
+Use K8S metadata for `MYSQL_NAME` and `MYSQL_NAMESPACE`,
+Attach external PVC to the web app container, and expose containerPort 8080
+
