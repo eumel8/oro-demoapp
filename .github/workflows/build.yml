@@ -40,7 +40,7 @@ jobs:
       run: |
         ko build -t ko --sbom none --bare
       env:
-       KO_DOCKER_REPO: ghcr.io/eumel8/oro-demoapp/demoapp
+       KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
 
     - name: Build the image with docker
       run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
@@ -62,7 +62,7 @@ jobs:
         docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
         docker push $IMAGE_ID:$VERSION
         cosign sign --key env://COSIGN_KEY $IMAGE_ID:$VERSION
-        cosign sign --key env://COSIGN_KEY ghcr.io/eumel8/oro-demoapp/demoapp:ko
+        cosign sign --key env://COSIGN_KEY ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME:ko
       env:
         COSIGN_KEY: ${{secrets.COSIGN_KEY}}
         COSIGN_PASSWORD: ${{secrets.COSIGN_PASSWORD}}
