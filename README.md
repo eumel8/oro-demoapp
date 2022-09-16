@@ -1,27 +1,27 @@
-Demoapp with Go MySQL
-=====================
+OTC RDS Operator Demoapp
+========================
 
-This demo app can be deploy on a Kubernetes cluster and will use
-the following feature:
+![](oro-demoapp.png)
+
+This demo is part of [OTC RDS Operator](https://github.com/eumel8/otc-rds-operator)
+and deploy on a Kubernetes cluster and will use the following feature:
 
 * Webapplication with UI
-* MySQL backend (e.g. RDS OTC)
+* MySQL backend (RDS OTC)
 * Storage (requires default StorageClass in cluster)
 
 Usage
 -----
 
-Adjust credentials and connection in `demoapp.yaml` for database connection
+Ensure existing OTC VPC,Subnet, and SecurityGroup in `demoapp-rds.yaml`
+
+and deploy manifest:
 
 ```bash
-MYSQL_USER # mysql username, e.g. `app` or `root` in init container
-MYSQL_PASSWORD # mysql password for `app`or `root` in init container
-MYSQL_HOST # mysql hostname
-MYSQL_PORT # mysql port, e.g. 3306
-MYSQL_DB # mysql db, e.g. `app`
-DATA_DIR # location of app images, e.g `/data`
+kubectl apply -f demoapp-rds.yaml
 ```
-and deploy manifest:
+
+deploy manifest:
 
 ```bash
 kubectl apply -f demoapp.yaml
@@ -33,3 +33,8 @@ and deploy manifest:
 ```bash
 kubectl apply -f demoapp-ingress.yaml
 ```
+
+On Ingress endpoint in your browser should appear `Golang Mysql Curd Example`
+
+Deep Dive
+---------
