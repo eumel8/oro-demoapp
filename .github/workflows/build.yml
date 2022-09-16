@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Build
 # https://github.com/marketplace/actions/cosign-installer
 on:
   push:
@@ -13,9 +13,7 @@ env:
   IMAGE_NAME: demoapp
   
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
 
     steps:
