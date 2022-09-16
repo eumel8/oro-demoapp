@@ -40,7 +40,7 @@ jobs:
       run: |
         ko build -t ko --sbom none --bare
       env:
-       KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/oro-demoapp
+       KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/oro-demoapp/demoapp
 
     - name: Build the image with docker
       run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
