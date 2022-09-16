@@ -10,7 +10,7 @@ on:
     types: [created]
     
 env:
-  IMAGE_NAME: oro-demoapp
+  IMAGE_NAME: oro-demoapp/demoapp
   
 jobs:
   build:
