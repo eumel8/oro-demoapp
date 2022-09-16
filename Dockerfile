@@ -14,7 +14,7 @@ WORKDIR /
 
 USER nonroot:nonroot
 COPY --from=builder --chown=nonroot:nonroot /app/main /
-COPY --from=builder --chown=nonroot:nonroot /app/form /form
+COPY --from=builder --chown=nonroot:nonroot /app/kodata /kodata
 
 EXPOSE 8080
 ENTRYPOINT ["/main"]
