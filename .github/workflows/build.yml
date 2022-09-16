@@ -38,7 +38,7 @@ jobs:
 
     - name: Build the image with ko
       run: |
-        ko build -t ko
+        ko build -t ko --sbom none --bare
       # env:
       #  KO_DOCKER_REPO: ghcr.io/eumel8/oro-demoapp
 
