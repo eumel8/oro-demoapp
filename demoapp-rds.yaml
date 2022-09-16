@@ -23,7 +23,7 @@ spec:
     name: app
     password: app1+Mond
     privileges:
-    - GRANT ALL ON app.* TO 'app'@'%'
+    - GRANT ALL PRIVILEGES ON app.* TO 'app'@'%'
   volumetype: "COMMON"
   volumesize: 40
   vpc: "golang"

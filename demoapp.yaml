@@ -1,31 +1,11 @@
 ---
-apiVersion: v1
-data:
-  run.sh: |
-    CREATE DATABASE IF NOT EXISTS app;
-    USE app;
-    CREATE TABLE IF NOT EXISTS `employee` (
-      `id` int(6) unsigned NOT NULL AUTO_INCREMENT,
-      `name` varchar(30) NOT NULL,
-      `city` varchar(30) NOT NULL,
-      `photo` varchar(128) NOT NULL,
-      PRIMARY KEY (`id`)
-    ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1;
-    CREATE USER IF NOT EXISTS 'app'@'%' IDENTIFIED BY 'A123456+';
-    GRANT ALL PRIVILEGES ON app.* TO 'app'@'%';
-kind: ConfigMap
-metadata:
-  labels:
-    app: demoapp-mysql
-  name: demoapp-createdb
----
 kind: Service
 apiVersion: v1
 metadata:
-  name: demoapp-mysql
+  name: demoapp-service
 spec:
   selector:
-    app: demoapp-mysql
+    app: demoapp
   ports:
     - port: 80
       targetPort: 8080
@@ -46,22 +26,22 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   labels:
-    app: demoapp-mysql
-  name: demoapp-mysql
+    app: demoapp
+  name: demoapp
 spec:
-  serviceName: demoapp-mysql
+  serviceName: demoapp
   replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: demoapp-mysql
+      app: demoapp
   template:
     metadata:
       labels:
-        app: demoapp-mysql
+        app: demoapp
     spec:
       containers:
-      - image: mtr.devops.telekom.de/mcsps/demoapp:2.0.0
+      - image: ghcr.io/eumel8/demoapp:1.0.0
         imagePullPolicy: Always
         name: demoapp
         ports:
@@ -88,7 +68,7 @@ spec:
         - name: MYSQL_NAME
           valueFrom:
             fieldRef:
-              fieldPath: metadata.name
+              fieldPath: spec.serviceAccountName
         - name: MYSQL_NAMESPACE
           valueFrom:
             fieldRef:
@@ -98,32 +78,6 @@ spec:
         volumeMounts:
         - mountPath: /data
           name: demoapp-volume
-      initContainers:
-      - name: dbinstall
-        imagePullPolicy: IfNotPresent
-        image: mtr.devops.telekom.de/mcsps/mysql-client:0.0.4
-        command: ["sh","-c"]
-        # first installation demo db
-        args: ["mysql -hxx.xx.xx.xx -uroot -pAa12345678+ < /createdb/run.sh"]
-        resources:
-          limits:
-            cpu: 100m
-            memory: 128Mi
-          requests:
-            cpu: 100m
-            memory: 128Mi
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          readOnlyRootFilesystem: true
-          runAsUser: 65535
-          runAsGroup: 65535
-        volumeMounts:
-        - name: createdb
-          mountPath: /createdb
       dnsPolicy: ClusterFirst
       hostNetwork: false
       restartPolicy: Always
@@ -133,11 +87,8 @@ spec:
         supplementalGroups:
         - 65535
       terminationGracePeriodSeconds: 3
-      serviceAccountName: demoapp-mysql
+      serviceAccountName: demoapp
       volumes:
-      - name: createdb
-        configMap:
-          name: demoapp-createdb
       - name: demoapp-volume
         persistentVolumeClaim:
           claimName: demoapp-volume
@@ -146,15 +97,15 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
-    app: demoapp-mysql
-  name: demoapp-mysql
+    app: demoapp
+  name: demoapp
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   labels:
-    app: demoapp-mysql
-  name: demoapp-mysql
+    app: demoapp
+  name: demoapp
 rules:
 - apiGroups:
   - ""
@@ -162,36 +113,51 @@ rules:
   - "*"
   verbs:
   - "*"
+- apiGroups:
+  - "otc.mcsps.de"
+  resources:
+  - "rdss"
+  verbs:
+  - "*"
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   labels:
-    app: demoapp-mysql
-  name: demoapp-mysql
+    app: demoapp
+  name: demoapp
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: demoapp-mysql
+  name: demoapp
 subjects:
   - kind: ServiceAccount
-    name: demoapp-mysql
+    name: demoapp
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   annotations:
-  name: np-demoapp-mysql
+  name: np-demoapp
 spec:
   egress:
+  - ports:
+    - port: 53
+      protocol: TCP
+  - ports:
+    - port: 53
+      protocol: UDP
   - ports:
     - port: 3306
       protocol: TCP
   - ports:
     - port: 443
       protocol: TCP
+  - ports:
+    - port: 6443
+      protocol: TCP
   podSelector:
     matchLabels:
-      app: demoapp-mysql
+      app: demoapp
   policyTypes:
   - Egress
