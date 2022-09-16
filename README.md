@@ -205,3 +205,127 @@ spec:
 Use K8S metadata for `MYSQL_NAME` and `MYSQL_NAMESPACE`,
 Attach external PVC to the web app container, and expose containerPort 8080
 
+```
+FROM mtr.devops.telekom.de/mcsps/golang:1.18 as builder
+
+WORKDIR /app
+ADD . /app
+
+RUN go mod download && go mod tidy && go build -o main main.go
+
+FROM gcr.io/distroless/base
+LABEL org.opencontainers.image.authors="f.kloeker@telekom.de"
+LABEL version="1.0.0"
+LABEL description="Create DemoApp for OTC RDS Operator"
+
+WORKDIR /
+
+USER nonroot:nonroot
+COPY --from=builder --chown=nonroot:nonroot /app/main /
+COPY --from=builder --chown=nonroot:nonroot /app/kodata /var/run/ko
+
+ENV KO_DATA_PATH=/var/run/ko
+EXPOSE 8080
+ENTRYPOINT ["/main"]
+```
+
+A Dockerfile to compile to Go binary and copy the result in a distroless
+images
+
+```yaml
+name: Build
+# https://github.com/marketplace/actions/cosign-installer
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches: [ master ]
+  release:
+    types: [created]
+    
+env:
+  IMAGE_NAME: oro-demoapp/demoapp
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.18
+
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+
+    - name: Setup ko
+      uses: imjasonh/setup-ko@v0.6
+
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@main
+
+    - name: Log in to ghcr registry
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        echo "${{ secrets.GITHUB_TOKEN }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
+
+    - name: Build the image with ko
+      run: |
+        ko build -t ko --sbom none --bare
+      env:
+       KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}/oro-demoapp/demoapp
+
+    - name: Build the image with docker
+      run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+
+    - name: Push & Sign image
+      run: |
+        IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+        # Change all uppercase to lowercase
+        IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+        # Strip git ref prefix from version
+        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+        # Strip "v" prefix from tag name
+        [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+        # Use Docker `latest` tag convention
+        [ "$VERSION" == "master" ] && VERSION=latest
+        echo IMAGE_ID=$IMAGE_ID
+        echo VERSION=$VERSION
+        echo "{{ github.ref.type }}"
+        docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+        docker push $IMAGE_ID:$VERSION
+        cosign sign --key env://COSIGN_KEY $IMAGE_ID:$VERSION
+        cosign sign --key env://COSIGN_KEY ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME:ko
+      env:
+        COSIGN_KEY: ${{secrets.COSIGN_KEY}}
+        COSIGN_PASSWORD: ${{secrets.COSIGN_PASSWORD}}
+
+    - name: Push & Sign image release
+      if: github.ref.type == 'tag'
+      run: |
+        IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+        IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+        VERSION=${GITHUB_REF_NAME}
+        docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
+        docker push $IMAGE_ID:$VERSION
+        cosign sign --key env://COSIGN_KEY $IMAGE_ID:$VERSION
+      env:
+        COSIGN_KEY: ${{secrets.COSIGN_KEY}}
+        COSIGN_PASSWORD: ${{secrets.COSIGN_PASSWORD}}
+```
+
+Github Action build the image with docker and with [ko](https://github.com/ko-build/ko)
+which don't need a Dockerfile definition. Both images are signed with [cosign](https://github.com/sigstore/cosign)
+ to verify with the [pubkey](https://raw.githubusercontent.com/eumel8/otc-rds-operator/master/cosign.pub)
+
+Using the [Github Registry](https://github.com/eumel8/oro-demoapp/pkgs/container/oro-demoapp%2Fdemoapp)
+
+## Credits
+
+Frank Kloeker f.kloeker@telekom.de
+
+Life is for sharing. If you have an issue with the code or want to improve it, feel free to open an issue or an pull request.
+
+Go Crud Example is adapted from [www.golangprograms.com](https://www.golangprograms.com/example-of-golang-crud-using-mysql-from-scratch.html)
