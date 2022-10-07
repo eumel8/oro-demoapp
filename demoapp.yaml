@@ -41,7 +41,7 @@ spec:
         app: demoapp
     spec:
       containers:
-      - image: ghcr.io/eumel8/demoapp:1.0.0
+      - image: ghcr.io/eumel8/oro-demoapp/demoapp:1.0.0
         imagePullPolicy: Always
         name: demoapp
         ports:
